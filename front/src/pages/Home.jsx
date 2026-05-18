@@ -10,7 +10,7 @@ import icone7 from "../assets/icone7.png";
 import icone8 from "../assets/icone8.png";
 import icone9 from "../assets/icone9.png";
 import icone10 from "../assets/icone10.png";
-import icone11 from "../assets/icone11.jpg";
+import icone11 from "../assets/icone11.png";
 import {
   FaPlay,
   FaMusic,

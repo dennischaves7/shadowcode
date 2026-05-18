@@ -93,8 +93,8 @@ async function handleStartGame(req, res, io) {
     }
 
     const agents = players.filter(p => p.role === 'agent');
-    if (agents.length < 2) {
-      return res.status(400).json({ error: 'São necessários pelo menos 2 agentes' });
+    if (agents.length < 3) {
+      return res.status(400).json({ error: 'São necessários pelo menos 3 agentes' });
     }
 
     const impostor = agents[Math.floor(Math.random() * agents.length)];
@@ -144,10 +144,33 @@ async function handleGetState(req, res) {
 
     if (!game) return res.status(404).json({ error: 'Partida não encontrada' });
 
-    res.json({ game, players, cards, clues });
+    // Remove is_impostor para não vazar quem é o impostor para todos os jogadores
+    const safePlayers = players.map(({ is_impostor: _, ...p }) => p);
+
+    res.json({ game, players: safePlayers, cards, clues });
   } catch (err) {
     console.error('[getState]', err);
     res.status(500).json({ error: 'Erro ao buscar estado da partida' });
+  }
+}
+
+// ── Buscar papel do próprio jogador ───────────────────────────────
+async function handleGetMyRole(req, res) {
+  try {
+    const { game_id, name } = req.query;
+    if (!game_id || !name) {
+      return res.status(400).json({ error: 'game_id e name são obrigatórios' });
+    }
+
+    const players = await getPlayersByGame(game_id);
+    const me = players.find(p => p.name === name);
+
+    if (!me) return res.status(404).json({ error: 'Jogador não encontrado' });
+
+    res.json({ is_impostor: me.is_impostor });
+  } catch (err) {
+    console.error('[getMyRole]', err);
+    res.status(500).json({ error: 'Erro ao buscar papel' });
   }
 }
 
@@ -265,6 +288,7 @@ module.exports = {
   handleJoinGame,
   handleStartGame,
   handleGetState,
+  handleGetMyRole,
   handleGetCards,
   handleRevealCard,
   handleSubmitClue,

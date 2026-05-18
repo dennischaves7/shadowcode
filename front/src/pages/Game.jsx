@@ -42,17 +42,20 @@ export default function Game() {
       return;
     }
 
-    fetch(`${API_URL}/game/state?game_id=${gameId}`)
-      .then(r => r.json())
-      .then(({ cards: c, players: p, clues: cl, game }) => {
+    Promise.all([
+      fetch(`${API_URL}/game/state?game_id=${gameId}`).then(r => r.json()),
+      myNick
+        ? fetch(`${API_URL}/game/my-role?game_id=${gameId}&name=${encodeURIComponent(myNick)}`).then(r => r.json())
+        : Promise.resolve({ is_impostor: false }),
+    ])
+      .then(([{ cards: c, players: p, clues: cl, game }, myRole]) => {
         setCards(c.map(card => ({ ...card, votes: 0 })));
 
         const stored = JSON.parse(localStorage.getItem(`avatars_${gameId}`) || '[]');
         const avatarMap = Object.fromEntries(stored.map(a => [a.nick, a.avatar]));
         setPlayers(p.map(player => ({ ...player, avatar: avatarMap[player.name] || '' })));
 
-        const me = p.find(player => player.name === myNick);
-        if (me?.is_impostor) setIsImpostor(true);
+        if (myRole.is_impostor) setIsImpostor(true);
 
         setClues(cl);
         if (cl.length > 0) {

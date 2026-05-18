@@ -178,7 +178,7 @@ export default function Lobby() {
 
           <div className="agentes-count-row">
             <FaUsers className="agentes-icon" />
-            <span className="agentes-number">4 - {maxPlayers}</span>
+            <span className="agentes-number">3 - {maxPlayers}</span>
           </div>
           <p className="agentes-label-sub">JOGADORES</p>
 

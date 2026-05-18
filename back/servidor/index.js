@@ -32,13 +32,13 @@ const io = new Server(server, {
   cors: { origin: ALLOWED_ORIGIN },
 });
 
-// ── Rotas ──────────────────────────────────────────────────────────
-app.use('/game', gameRoutes(io, roundState));
-
 // ── Estado em memória ──────────────────────────────────────────────
 const lobbies    = {};
 const gameVotes  = {}; // { [gameId]: { [cardId]: Set<socketId> } }
 const roundState = {}; // { [gameId]: { phase: 'clue'|'guess', flips: 0, maxFlips: 0 } }
+
+// ── Rotas ──────────────────────────────────────────────────────────
+app.use('/game', gameRoutes(io, roundState));
 
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -172,8 +172,8 @@ io.on('connection', (socket) => {
       socket.emit('game_start_error', { message: 'É necessário um mestre para iniciar.' });
       return;
     }
-    if (agentCount < 2) {
-      socket.emit('game_start_error', { message: 'São necessários pelo menos 2 agentes.' });
+    if (agentCount < 3) {
+      socket.emit('game_start_error', { message: 'São necessários pelo menos 3 agentes.' });
       return;
     }
 

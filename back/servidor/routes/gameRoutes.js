@@ -4,6 +4,7 @@ const {
   handleJoinGame,
   handleStartGame,
   handleGetState,
+  handleGetMyRole,
   handleGetCards,
   handleRevealCard,
   handleSubmitClue,
@@ -14,9 +15,10 @@ module.exports = (io, roundState) => {
   const router = Router();
 
   // leitura
-  router.get('/state',  (req, res) => handleGetState(req, res));
-  router.get('/cards',  (req, res) => handleGetCards(req, res));
-  router.get('/clues',  (req, res) => handleGetClues(req, res));
+  router.get('/state',   (req, res) => handleGetState(req, res));
+  router.get('/my-role', (req, res) => handleGetMyRole(req, res));
+  router.get('/cards',   (req, res) => handleGetCards(req, res));
+  router.get('/clues',   (req, res) => handleGetClues(req, res));
 
   // escrita
   router.post('/create', (req, res) => handleCreateGame(req, res));
