@@ -2,7 +2,7 @@ import "./Lobby.css";
 import logo from "../assets/logoShadowCode.png";
 import {
   FaBookmark, FaCog, FaCrown, FaUsers, FaLink, FaCopy,
-  FaPlay, FaRandom, FaSync, FaUserFriends, FaSignInAlt, FaUser,
+  FaPlay, FaRandom, FaSync, FaUserFriends, FaSignInAlt, FaUser, FaStopwatch,
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
@@ -21,13 +21,17 @@ export default function Lobby() {
   const searchParams = new URLSearchParams(location.search);
   const codeParam    = searchParams.get('code');
 
-  const [gameCode, setGameCode] = useState(codeParam || '---');
-  const [players,  setPlayers]  = useState([]);
-  const [copied,   setCopied]   = useState(false);
+  const [gameCode,   setGameCode]   = useState(codeParam || '---');
+  const [players,    setPlayers]    = useState([]);
+  const [copied,     setCopied]     = useState(false);
+  const [roundTime,  setRoundTime]  = useState(null); // segundos por rodada (null = sem timer)
+  const [timerInput, setTimerInput] = useState('');
   const socketRef   = useRef(null);
   const gameCodeRef = useRef(codeParam || '');
 
   useEffect(() => {
+    sessionStorage.removeItem('isImpostor');
+
     const socket = io(SOCKET_URL);
     socketRef.current = socket;
 
@@ -54,14 +58,20 @@ export default function Lobby() {
       navigate('/');
     });
 
-    socket.on('game_ready', ({ gameId, avatars }) => {
+    socket.on('game_ready', ({ gameId, avatars, isImpostor }) => {
       localStorage.setItem(`avatars_${gameId}`, JSON.stringify(avatars));
       localStorage.setItem('lastLobbyCode', gameCodeRef.current);
+      localStorage.setItem(`isImpostor_${gameId}`, isImpostor ? 'true' : 'false');
       navigate(`/game?gameId=${gameId}`);
     });
 
     socket.on('game_start_error', ({ message }) => {
       alert(message);
+    });
+
+    socket.on('lobby_timer_update', ({ seconds }) => {
+      setRoundTime(seconds || null);
+      if (seconds) setTimerInput(String(seconds));
     });
 
     return () => socket.disconnect();
@@ -74,7 +84,7 @@ export default function Lobby() {
 
   const master     = players.find(p => p.gameRole === 'master');
   const agents     = players.filter(p => p.gameRole === 'agent');
-  const maxPlayers = 15;
+  const maxPlayers = 10;
 
   const emit = (event, data) => socketRef.current?.emit(event, data);
 
@@ -88,6 +98,17 @@ export default function Lobby() {
   const handleMove   = (targetSocketId, newRole) => emit('lobby_move_role',   { code: gameCode, targetSocketId, newRole });
   const handleReset  = ()                        => emit('lobby_reset',       { code: gameCode });
   const handleRandom = ()                        => emit('lobby_randomize',   { code: gameCode });
+
+  const handleSetTimer = () => {
+    const secs = parseInt(timerInput, 10);
+    if (!secs || secs < 5) return;
+    emit('lobby_set_timer', { code: gameCode, seconds: secs });
+  };
+
+  const handleClearTimer = () => {
+    emit('lobby_set_timer', { code: gameCode, seconds: null });
+    setTimerInput('');
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(gameCode).catch(() => {});
@@ -244,6 +265,37 @@ export default function Lobby() {
                 <FaSync /> Redefinir Agentes
               </button>
             </div>
+          )}
+
+          {isAdmin && (
+            <div className="timer-control">
+              <span className="timer-control-label"><FaStopwatch /> Tempo por rodada</span>
+              <div className="timer-input-row">
+                <input
+                  type="number"
+                  className="timer-input"
+                  placeholder="Segundos..."
+                  min="5"
+                  max="600"
+                  value={timerInput}
+                  onChange={e => setTimerInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleSetTimer()}
+                />
+                <button className="timer-set-btn" onClick={handleSetTimer}>
+                  {roundTime ? 'Alterar' : 'Definir'}
+                </button>
+                {roundTime && (
+                  <button className="timer-clear-btn" onClick={handleClearTimer}>✕</button>
+                )}
+              </div>
+              {roundTime && (
+                <span className="timer-active">⏱ {roundTime}s por rodada definido</span>
+              )}
+            </div>
+          )}
+
+          {!isAdmin && roundTime && (
+            <div className="timer-info">⏱ {roundTime}s por rodada</div>
           )}
 
           {myRole === 'agent' ? (

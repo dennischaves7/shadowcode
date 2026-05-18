@@ -11,7 +11,7 @@ const {
   handleGetClues,
 } = require('../controllers/gameController');
 
-module.exports = (io, roundState) => {
+module.exports = (io, roundState, startRoundTimer) => {
   const router = Router();
 
   // leitura
@@ -25,7 +25,7 @@ module.exports = (io, roundState) => {
   router.post('/join',   (req, res) => handleJoinGame(req, res, io));
   router.post('/start',  (req, res) => handleStartGame(req, res, io));
   router.post('/reveal', (req, res) => handleRevealCard(req, res, io));
-  router.post('/clue',   (req, res) => handleSubmitClue(req, res, io, roundState));
+  router.post('/clue',   (req, res) => handleSubmitClue(req, res, io, roundState, startRoundTimer));
 
   return router;
 };

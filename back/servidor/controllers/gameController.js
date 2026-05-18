@@ -97,15 +97,17 @@ async function handleStartGame(req, res, io) {
       return res.status(400).json({ error: 'São necessários pelo menos 3 agentes' });
     }
 
-    const impostor = agents[Math.floor(Math.random() * agents.length)];
-    await setImpostor(impostor.id);
+    const impostorCount = agents.length >= 6 ? 2 : 1;
+    const shuffled      = [...agents].sort(() => Math.random() - 0.5);
+    const impostors     = shuffled.slice(0, impostorCount);
+    for (const imp of impostors) await setImpostor(imp.id);
     await updateGameStatus(game_id, 'playing', 'clue');
 
     const shuffledWords = [...WORDS].sort(() => Math.random() - 0.5).slice(0, 25);
     const types = [
-      ...Array(15).fill('correct'),
-      ...Array(9).fill('neutral'),
-      ...Array(1).fill('assassin'),
+      ...Array(10).fill('correct'),
+      ...Array(12).fill('neutral'),
+      ...Array(3).fill('assassin'),
     ].sort(() => Math.random() - 0.5);
 
     const cards = shuffledWords.map((word, i) => ({
@@ -121,7 +123,7 @@ async function handleStartGame(req, res, io) {
     res.json({
       success: true,
       master: master.name,
-      impostorId: impostor.id,
+      impostorIds: impostors.map(i => i.id),
     });
   } catch (err) {
     console.error('[startGame]', err);
@@ -163,11 +165,12 @@ async function handleGetMyRole(req, res) {
     }
 
     const players = await getPlayersByGame(game_id);
-    const me = players.find(p => p.name === name);
+    const me = players.find(p => p.name === name)
+            || players.find(p => p.name.trim().toLowerCase() === name.trim().toLowerCase());
 
-    if (!me) return res.status(404).json({ error: 'Jogador não encontrado' });
+    if (!me) return res.json({ is_impostor: false });
 
-    res.json({ is_impostor: me.is_impostor });
+    res.json({ is_impostor: !!me.is_impostor });
   } catch (err) {
     console.error('[getMyRole]', err);
     res.status(500).json({ error: 'Erro ao buscar papel' });
@@ -227,7 +230,7 @@ async function handleRevealCard(req, res, io) {
 }
 
 // ── Enviar dica (mestre) ──────────────────────────────────────────
-async function handleSubmitClue(req, res, io, roundState) {
+async function handleSubmitClue(req, res, io, roundState, startRoundTimer) {
   try {
     const { game_id, word, number } = req.body;
 
@@ -257,10 +260,11 @@ async function handleSubmitClue(req, res, io, roundState) {
       if (!roundState[game_id]) roundState[game_id] = {};
       roundState[game_id].phase    = 'guess';
       roundState[game_id].flips    = 0;
-      roundState[game_id].maxFlips = Number(number) + 1; // agentes podem virar +1 além do número
+      roundState[game_id].maxFlips = Number(number);
     }
 
     io.to(`game_${game_id}`).emit('clue_submitted', clue);
+    if (startRoundTimer) await startRoundTimer(game_id);
 
     res.status(201).json(clue);
   } catch (err) {

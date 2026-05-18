@@ -2,8 +2,7 @@ import "./Game.css";
 import cartaBege    from "../assets/cartas/cartaBege.png";
 import cartaDourada from "../assets/cartas/cartaDourada.png";
 import cartaPreta   from "../assets/cartas/cartaPreta.png";
-import { FaCommentDots, FaPaperPlane, FaPlus, FaBars, FaChevronLeft, FaExclamationTriangle, FaShieldAlt } from "react-icons/fa";
-import logoIcon from "../assets/logoShadowCode.png";
+import { FaCommentDots, FaPaperPlane, FaPlus, FaBars, FaChevronLeft } from "react-icons/fa";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { io } from "socket.io-client";
@@ -23,7 +22,7 @@ export default function Game() {
   const socketRef   = useRef(null);
 
   const isMaster = localStorage.getItem('gameRole') === 'master';
-  const myNick   = localStorage.getItem('nick') || '';
+  const isAdmin  = localStorage.getItem('userRole') === 'admin';
 
   const [cards,     setCards]     = useState([]);
   const [players,   setPlayers]   = useState([]);
@@ -33,9 +32,14 @@ export default function Game() {
   const [clueNumber,  setClueNumber]  = useState(1);
   const [loading,     setLoading]     = useState(true);
   const [gameOver,    setGameOver]    = useState(null);
+  const [showResult,  setShowResult]  = useState(false);
   const [showPlayersPanel, setShowPlayersPanel] = useState(false);
-  const [isImpostor,  setIsImpostor]  = useState(false);
+  const [isImpostor,  setIsImpostor]  = useState(() => localStorage.getItem(`isImpostor_${searchParams.get('gameId')}`) === 'true');
   const [phase,       setPhase]       = useState('clue'); // 'clue' | 'guess'
+  const [votedCards,    setVotedCards]    = useState(new Set()); // cartas que este jogador já votou
+  const [roundTimeLeft, setRoundTimeLeft] = useState(null);
+  const [roundTimeDuration, setRoundTimeDuration] = useState(null);
+  const countdownRef = useRef(null);
 
   useEffect(() => {
     if (!gameId) {
@@ -43,27 +47,21 @@ export default function Game() {
       return;
     }
 
-    Promise.all([
-      fetch(`${API_URL}/game/state?game_id=${gameId}`).then(r => r.json()),
-      myNick
-        ? fetch(`${API_URL}/game/my-role?game_id=${gameId}&name=${encodeURIComponent(myNick)}`).then(r => r.json())
-        : Promise.resolve({ is_impostor: false }),
-    ])
-      .then(([{ cards: c, players: p, clues: cl, game }, myRole]) => {
+    fetch(`${API_URL}/game/state?game_id=${gameId}`)
+      .then(r => r.json())
+      .then(({ cards: c, players: p, clues: cl, game }) => {
         setCards(c.map(card => ({ ...card, votes: 0 })));
 
         const stored = JSON.parse(localStorage.getItem(`avatars_${gameId}`) || '[]');
         const avatarMap = Object.fromEntries(stored.map(a => [a.nick, a.avatar]));
         setPlayers(p.map(player => ({ ...player, avatar: avatarMap[player.name] || '' })));
 
-        if (myRole.is_impostor) setIsImpostor(true);
-
         setClues(cl);
         if (cl.length > 0) {
           setActiveClue(cl[cl.length - 1]);
           setPhase(game.phase === 'guess' ? 'guess' : 'clue');
         }
-        if (game.status === 'finished') setGameOver({ winner: game.winner, lobbyCode: localStorage.getItem('lastLobbyCode') });
+        if (game.status === 'finished') { setGameOver({ winner: game.winner, lobbyCode: localStorage.getItem('lastLobbyCode') }); setShowResult(true); }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -89,28 +87,61 @@ export default function Game() {
       setPhase('guess');
     });
 
+    socket.on('round_timer', ({ duration }) => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      setRoundTimeDuration(duration);
+      setRoundTimeLeft(duration);
+      countdownRef.current = setInterval(() => {
+        setRoundTimeLeft(prev => {
+          if (prev === null || prev <= 1) {
+            clearInterval(countdownRef.current);
+            countdownRef.current = null;
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    });
+
     socket.on('round_end', () => {
       setPhase('clue');
       setActiveClue(null);
       setCards(prev => prev.map(c => ({ ...c, votes: 0 })));
+      setVotedCards(new Set());
+      if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+      setRoundTimeLeft(null);
+      setRoundTimeDuration(null);
     });
 
     socket.on('game_finished', ({ winner, lobbyCode }) => {
+      const code = lobbyCode || localStorage.getItem('lastLobbyCode');
       if (lobbyCode) localStorage.setItem('lastLobbyCode', lobbyCode);
-      setGameOver({ winner, lobbyCode: lobbyCode || localStorage.getItem('lastLobbyCode') });
+      setGameOver({ winner, lobbyCode: code });
+      setShowResult(true);
+      setCards(prev => prev.map(c => ({ ...c, revealed: true })));
+      if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+      setRoundTimeLeft(null);
+      setRoundTimeDuration(null);
     });
 
-    return () => socket.disconnect();
+    socket.on('return_to_lobby', ({ lobbyCode: code }) => {
+      sessionStorage.removeItem('isImpostor');
+      navigate(code ? `/lobby?code=${code}` : '/');
+    });
+
+    return () => {
+      socket.disconnect();
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
   }, [gameId]);
 
   const handleVote = (card) => {
     if (card.revealed || !socketRef.current) return;
     if (card.votes >= 3) {
-      // Qualquer jogador pode virar carta com 3 votos
       socketRef.current.emit('flip_card', { gameId, cardId: card.id });
-    } else if (!isMaster && phase === 'guess') {
-      // Agentes/impostor só votam após a dica do mestre
+    } else if (!isMaster && phase === 'guess' && !votedCards.has(card.id)) {
       socketRef.current.emit('vote_card', { gameId, cardId: card.id });
+      setVotedCards(prev => new Set([...prev, card.id]));
     }
   };
 
@@ -132,6 +163,12 @@ export default function Game() {
     }
   };
 
+  const handleReturnToLobby = () => {
+    if (!socketRef.current) return;
+    const lobbyCode = gameOver?.lobbyCode || localStorage.getItem('lastLobbyCode');
+    socketRef.current.emit('lobby_return', { gameId, lobbyCode });
+  };
+
   const master    = players.find(p => p.role === 'master');
   const agents    = players.filter(p => p.role === 'agent');
   const remaining = cards.filter(c => c.type === 'correct' && !c.revealed).length;
@@ -144,43 +181,8 @@ export default function Game() {
     );
   }
 
-  if (gameOver) {
-    const isImpostorWin = gameOver.winner === 'impostor';
-    const lobbyCode = gameOver.lobbyCode || localStorage.getItem('lastLobbyCode');
-    const handleBack = () => navigate(lobbyCode ? `/lobby?code=${lobbyCode}` : '/');
-
-    return (
-      <div className={`gameover-screen${isImpostorWin ? '' : ' agents-win'}`}>
-        <div className={`gameover-glow${isImpostorWin ? '' : ' agents'}`} />
-        <div className={`gameover-card${isImpostorWin ? '' : ' agents-card'}`}>
-          <img
-            src={logoIcon}
-            alt="Shadow Code"
-            className={`gameover-logo${isImpostorWin ? '' : ' agents-logo'}`}
-          />
-          <div className="gameover-text">
-            <span className="gameover-label">PARTIDA ENCERRADA</span>
-            <h1 className={`gameover-title${isImpostorWin ? '' : ' agents'}`}>
-              {isImpostorWin ? 'O IMPOSTOR VENCEU!' : 'OS AGENTES VENCERAM!'}
-            </h1>
-          </div>
-          {isImpostorWin
-            ? <FaExclamationTriangle className="gameover-warn" />
-            : <FaShieldAlt className="gameover-warn agents-warn" />}
-        </div>
-        <button
-          className={`gameover-btn${isImpostorWin ? '' : ' agents-btn'}`}
-          onClick={handleBack}
-        >
-          <FaChevronLeft />
-          VOLTAR PARA A SALA
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="game-page">
+    <div className={`game-page${gameOver ? ' game-ended' : ''}`}>
 
       {/* NAVBAR MOBILE */}
       <div className="game-mobile-nav">
@@ -263,6 +265,16 @@ export default function Game() {
         {/* GRID + BARRA */}
         <div className="game-center">
 
+          {roundTimeLeft !== null && (
+            <div className={`round-timer-bar${roundTimeLeft <= 10 ? ' urgent' : ''}`}>
+              <div
+                className="round-timer-fill"
+                style={{ width: `${(roundTimeLeft / (roundTimeDuration || roundTimeLeft)) * 100}%` }}
+              />
+              <span className="round-timer-label">⏱ {roundTimeLeft}s</span>
+            </div>
+          )}
+
           <div className="card-grid">
             {cards.map(card => (
               <div
@@ -270,12 +282,20 @@ export default function Game() {
                 className={`game-card${card.revealed ? ' revealed' : ''}${!card.revealed && card.votes >= 3 ? ' ready' : ''}`}
                 onClick={() => handleVote(card)}
               >
-                <img src={isMaster || card.revealed ? CARD_IMG[card.type] : cartaBege} alt={card.word} className="card-img" />
-                {!card.revealed && (
-                  <div className="card-votes">
-                    {[0, 1, 2].map(i => (
-                      <span key={i} className={`vote-dash${card.votes > i ? ' filled' : ''}`} />
-                    ))}
+                <img
+                  src={
+                    isMaster || card.revealed
+                      ? CARD_IMG[card.type]
+                      : isImpostor && card.type === 'assassin'
+                      ? CARD_IMG['assassin']
+                      : cartaBege
+                  }
+                  alt={card.word}
+                  className="card-img"
+                />
+                {!card.revealed && card.votes > 0 && (
+                  <div className={`card-votes${votedCards.has(card.id) ? ' my-vote' : ''}`}>
+                    <span className="vote-count">{card.votes}</span>
                   </div>
                 )}
                 <span className="card-word">{card.word}</span>
@@ -300,45 +320,54 @@ export default function Game() {
             </div>
           </div>
 
-          {/* BARRA DE DICA — só mestre digita; agentes apenas veem */}
-          {isMaster && (
-            activeClue ? (
-              <div className="clue-display">
-                <span className="clue-display-word">{activeClue.word}</span>
-                <span className="clue-display-number">{activeClue.number}</span>
-                <button className="clue-new-btn" onClick={() => setActiveClue(null)} title="Nova dica">
-                  <FaPlus />
-                </button>
-              </div>
-            ) : (
-              <div className="clue-bar">
-                <FaCommentDots className="clue-dots" />
-                <input
-                  className="clue-input"
-                  type="text"
-                  placeholder="Sua dica (uma palavra)..."
-                  value={clueWord}
-                  onChange={e => setClueWord(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSendClue()}
-                  autoFocus
-                />
-                <div className="clue-number">
-                  <button className="clue-minus" onClick={() => setClueNumber(n => Math.max(1, n - 1))}>−</button>
-                  <span className="clue-num-display">{clueNumber}</span>
-                  <button className="clue-minus" onClick={() => setClueNumber(n => Math.min(9, n + 1))}>+</button>
-                </div>
-                <button className="clue-send" onClick={handleSendClue}>
-                  <FaPaperPlane />
-                </button>
-              </div>
+          {/* ÁREA INFERIOR: botão de retorno (fim de jogo) ou barra de dica */}
+          {gameOver ? (
+            isAdmin && (
+              <button className="return-lobby-btn" onClick={handleReturnToLobby}>
+                <FaChevronLeft /> VOLTAR TODOS AO LOBBY
+              </button>
             )
-          )}
-
-          {!isMaster && activeClue && (
-            <div className="clue-display">
-              <span className="clue-display-word">{activeClue.word}</span>
-              <span className="clue-display-number">{activeClue.number}</span>
-            </div>
+          ) : (
+            <>
+              {isMaster && (
+                activeClue ? (
+                  <div className="clue-display">
+                    <span className="clue-display-word">{activeClue.word}</span>
+                    <span className="clue-display-number">{activeClue.number}</span>
+                    <button className="clue-new-btn" onClick={() => setActiveClue(null)} title="Nova dica">
+                      <FaPlus />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="clue-bar">
+                    <FaCommentDots className="clue-dots" />
+                    <input
+                      className="clue-input"
+                      type="text"
+                      placeholder="Sua dica (uma palavra)..."
+                      value={clueWord}
+                      onChange={e => setClueWord(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleSendClue()}
+                      autoFocus
+                    />
+                    <div className="clue-number">
+                      <button className="clue-minus" onClick={() => setClueNumber(n => Math.max(1, n - 1))}>−</button>
+                      <span className="clue-num-display">{clueNumber}</span>
+                      <button className="clue-minus" onClick={() => setClueNumber(n => Math.min(9, n + 1))}>+</button>
+                    </div>
+                    <button className="clue-send" onClick={handleSendClue}>
+                      <FaPaperPlane />
+                    </button>
+                  </div>
+                )
+              )}
+              {!isMaster && activeClue && (
+                <div className="clue-display">
+                  <span className="clue-display-word">{activeClue.word}</span>
+                  <span className="clue-display-number">{activeClue.number}</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -377,6 +406,19 @@ export default function Game() {
         </aside>
 
       </div>
+
+      {/* MODAL DE RESULTADO */}
+      {gameOver && showResult && (
+        <div className="result-overlay">
+          <div className={`result-card${gameOver.winner === 'agents' ? ' agents' : ''}`}>
+            <button className="result-close-btn" onClick={() => setShowResult(false)}>✕</button>
+            <span className="result-label">PARTIDA ENCERRADA</span>
+            <p className={`result-title${gameOver.winner === 'agents' ? ' agents' : ''}`}>
+              {gameOver.winner === 'impostor' ? 'O IMPOSTOR VENCEU!' : 'OS AGENTES VENCERAM!'}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
