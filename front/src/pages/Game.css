@@ -13,6 +13,12 @@
   padding: 1rem 1.4rem calc(0.8rem + 50px);
 }
 
+@supports (height: 100dvh) {
+  .game-page {
+    height: 100dvh;
+  }
+}
+
 /* =====================
    TÍTULO
 ===================== */
@@ -563,7 +569,9 @@
 
   .card-grid {
     gap: 0.3rem;
-    max-height: 58vh;
+    flex: 1;
+    min-height: 0;
+    max-height: none;
   }
 
   .card-word {
