@@ -76,6 +76,11 @@ __sapper__/
 # dotenv environment variables file
 *.env
 
+# SQLite
+*.db
+*.db-shm
+*.db-wal
+
 # misc
 *.pem
 *.p12

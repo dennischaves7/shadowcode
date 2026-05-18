@@ -23,7 +23,7 @@ const {
 const app    = express();
 const server = http.createServer(app);
 
-const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:5173';
+const ALLOWED_ORIGIN = (process.env.ALLOWED_ORIGIN || 'http://localhost:5173').replace(/\/$/, '');
 
 app.use(cors({ origin: ALLOWED_ORIGIN }));
 app.use(express.json());
