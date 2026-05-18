@@ -1,6 +1,191 @@
 @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
 
 /* =====================
+   GAME OVER SCREEN
+===================== */
+.gameover-screen {
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at top, #1f0010 0%, #06000c 70%);
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+@supports (height: 100dvh) {
+  .gameover-screen {
+    height: 100dvh;
+  }
+}
+
+.gameover-screen.agents-win {
+  background: radial-gradient(ellipse at top, #130025 0%, #06000c 70%);
+}
+
+.gameover-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(180, 20, 20, 0.13) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.gameover-glow.agents {
+  background: radial-gradient(ellipse at center, rgba(255, 214, 10, 0.08) 0%, transparent 65%);
+}
+
+.gameover-card {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+  background: linear-gradient(135deg, rgba(30, 5, 50, 0.9) 0%, rgba(10, 0, 15, 0.95) 100%);
+  border: 1px solid rgba(180, 20, 20, 0.45);
+  border-radius: 1.2rem;
+  box-shadow:
+    0 0 3rem rgba(180, 20, 20, 0.2),
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 2.5rem 3rem;
+  position: relative;
+  z-index: 1;
+  max-width: 680px;
+  width: 100%;
+}
+
+.gameover-card.agents-card {
+  border-color: rgba(255, 214, 10, 0.3);
+  box-shadow:
+    0 0 3rem rgba(255, 214, 10, 0.1),
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.gameover-logo {
+  width: 7rem;
+  height: 7rem;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter:
+    drop-shadow(0 0 18px rgba(200, 20, 20, 0.9))
+    drop-shadow(0 0 40px rgba(200, 20, 20, 0.4));
+}
+
+.gameover-logo.agents-logo {
+  filter:
+    drop-shadow(0 0 18px rgba(255, 214, 10, 0.7))
+    drop-shadow(0 0 40px rgba(255, 214, 10, 0.25));
+}
+
+.gameover-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.gameover-label {
+  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.gameover-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: #e63946;
+  text-shadow: 0 0 28px rgba(230, 57, 70, 0.55);
+  margin: 0;
+}
+
+.gameover-title.agents {
+  color: #ffd60a;
+  text-shadow: 0 0 28px rgba(255, 214, 10, 0.5);
+}
+
+.gameover-warn {
+  font-size: 2.4rem;
+  color: #e63946;
+  opacity: 0.85;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(230, 57, 70, 0.55));
+}
+
+.gameover-warn.agents-warn {
+  color: #ffd60a;
+  filter: drop-shadow(0 0 8px rgba(255, 214, 10, 0.5));
+}
+
+.gameover-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  background: rgba(10, 0, 20, 0.7);
+  border: 1.5px solid rgba(180, 20, 20, 0.5);
+  border-radius: 0.65rem;
+  color: white;
+  font-size: 0.92rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 1rem 2.5rem;
+  cursor: pointer;
+  margin-top: 2rem;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  position: relative;
+  z-index: 1;
+  max-width: 380px;
+  width: 100%;
+}
+
+.gameover-btn:hover {
+  background: rgba(180, 20, 20, 0.18);
+  border-color: rgba(180, 20, 20, 0.85);
+  box-shadow: 0 0 1.5rem rgba(180, 20, 20, 0.25);
+}
+
+.gameover-btn.agents-btn {
+  border-color: rgba(255, 214, 10, 0.4);
+}
+
+.gameover-btn.agents-btn:hover {
+  background: rgba(255, 214, 10, 0.1);
+  border-color: rgba(255, 214, 10, 0.8);
+  box-shadow: 0 0 1.5rem rgba(255, 214, 10, 0.2);
+}
+
+@media (max-width: 600px) {
+  .gameover-card {
+    flex-direction: column;
+    text-align: center;
+    padding: 2rem 1.5rem;
+    gap: 1.2rem;
+  }
+
+  .gameover-logo {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+
+  .gameover-warn {
+    display: none;
+  }
+
+  .gameover-title {
+    font-size: clamp(1.8rem, 8vw, 2.5rem);
+  }
+}
+
+/* =====================
    PAGE
 ===================== */
 .game-page {

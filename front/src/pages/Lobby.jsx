@@ -24,21 +24,24 @@ export default function Lobby() {
   const [gameCode, setGameCode] = useState(codeParam || '---');
   const [players,  setPlayers]  = useState([]);
   const [copied,   setCopied]   = useState(false);
-  const socketRef = useRef(null);
+  const socketRef   = useRef(null);
+  const gameCodeRef = useRef(codeParam || '');
 
   useEffect(() => {
     const socket = io(SOCKET_URL);
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      if (isAdmin) {
+      if (isAdmin && !codeParam) {
         socket.emit('lobby_create', { nick, avatar: avatarUrl });
+      } else if (isAdmin && codeParam) {
+        socket.emit('lobby_reclaim_admin', { code: codeParam, nick, avatar: avatarUrl });
       } else {
         socket.emit('lobby_join_code', { code: codeParam, nick, avatar: avatarUrl });
       }
     });
 
-    socket.on('lobby_created', ({ code }) => setGameCode(code));
+    socket.on('lobby_created', ({ code }) => { setGameCode(code); gameCodeRef.current = code; });
     socket.on('lobby_update',  setPlayers);
 
     socket.on('lobby_error', ({ message }) => {
@@ -53,6 +56,7 @@ export default function Lobby() {
 
     socket.on('game_ready', ({ gameId, avatars }) => {
       localStorage.setItem(`avatars_${gameId}`, JSON.stringify(avatars));
+      localStorage.setItem('lastLobbyCode', gameCodeRef.current);
       navigate(`/game?gameId=${gameId}`);
     });
 
@@ -79,6 +83,7 @@ export default function Lobby() {
     emit('lobby_choose_role', { code: gameCode, gameRole });
   };
   const handleLeave  = ()                        => { localStorage.removeItem('gameRole'); emit('lobby_leave',      { code: gameCode }); };
+  const handleExitToHome = () => { localStorage.removeItem('gameRole'); emit('lobby_leave', { code: gameCode }); navigate('/'); };
   const handleKick   = (targetSocketId)          => emit('lobby_kick',        { code: gameCode, targetSocketId });
   const handleMove   = (targetSocketId, newRole) => emit('lobby_move_role',   { code: gameCode, targetSocketId, newRole });
   const handleReset  = ()                        => emit('lobby_reset',       { code: gameCode });
@@ -104,7 +109,7 @@ export default function Lobby() {
         </div>
 
         <div className="nav-center">
-          <img src={logo} alt="Shadow Code" className="nav-logo" />
+          <img src={logo} alt="Shadow Code" className="nav-logo" onClick={handleExitToHome} style={{ cursor: 'pointer' }} />
         </div>
 
         <div className="nav-right">

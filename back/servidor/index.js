@@ -200,7 +200,7 @@ io.on('connection', (socket) => {
       const cards = shuffledWords.map((word, i) => ({ word, gameId, type: types[i] }));
       await insertCards(cards);
 
-      roundState[gameId] = { phase: 'clue', flips: 0, maxFlips: 0 };
+      roundState[gameId] = { phase: 'clue', flips: 0, maxFlips: 0, lobbyCode: code };
 
       const avatars = lobby.players.map(p => ({ nick: p.nick, avatar: p.avatar }));
       io.to(`lobby_${code}`).emit('game_ready', { gameId, avatars });
@@ -208,6 +208,25 @@ io.on('connection', (socket) => {
       console.error('[lobby_start]', err);
       socket.emit('game_start_error', { message: 'Erro ao iniciar. Banco de dados está conectado?' });
     }
+  });
+
+  // ── Admin retorna à sala após partida ─────────────────────────
+  socket.on('lobby_reclaim_admin', ({ code, nick, avatar }) => {
+    const lobby = lobbies[code];
+    if (!lobby) {
+      socket.emit('lobby_error', { message: 'Sala não encontrada' });
+      return;
+    }
+    const prevAdmin = io.sockets.sockets.get(lobby.adminSocketId);
+    if (prevAdmin) {
+      socket.emit('lobby_error', { message: 'Admin já está na sala' });
+      return;
+    }
+    lobby.adminSocketId = socket.id;
+    lobby.players = lobby.players.filter(p => p.socketId !== socket.id);
+    socket.join(`lobby_${code}`);
+    socket.data = { lobbyCode: code, nick, avatar, isAdmin: true };
+    socket.emit('lobby_update', lobby.players);
   });
 
   // ── Votar em carta ─────────────────────────────────────────────
@@ -249,7 +268,8 @@ io.on('connection', (socket) => {
 
       if (card.type === 'assassin') {
         await updateGameStatus(gameId, 'finished', null, 'impostor');
-        io.to(`game_${gameId}`).emit('game_finished', { winner: 'impostor' });
+        const lobbyCode = roundState[gameId]?.lobbyCode;
+        io.to(`game_${gameId}`).emit('game_finished', { winner: 'impostor', lobbyCode });
 
       } else if (card.type === 'neutral') {
         // Carta bege: encerra a rodada imediatamente
@@ -262,7 +282,8 @@ io.on('connection', (socket) => {
         const remaining = await getRemainingCorrect(gameId);
         if (remaining.length === 0) {
           await updateGameStatus(gameId, 'finished', null, 'agents');
-          io.to(`game_${gameId}`).emit('game_finished', { winner: 'agents' });
+          const lobbyCode = roundState[gameId]?.lobbyCode;
+          io.to(`game_${gameId}`).emit('game_finished', { winner: 'agents', lobbyCode });
           return;
         }
         if (roundState[gameId]) {

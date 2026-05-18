@@ -2,7 +2,8 @@ import "./Game.css";
 import cartaBege    from "../assets/cartas/cartaBege.png";
 import cartaDourada from "../assets/cartas/cartaDourada.png";
 import cartaPreta   from "../assets/cartas/cartaPreta.png";
-import { FaCommentDots, FaPaperPlane, FaPlus, FaBars, FaChevronLeft } from "react-icons/fa";
+import { FaCommentDots, FaPaperPlane, FaPlus, FaBars, FaChevronLeft, FaExclamationTriangle, FaShieldAlt } from "react-icons/fa";
+import logoIcon from "../assets/logoShadowCode.png";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { io } from "socket.io-client";
@@ -62,7 +63,7 @@ export default function Game() {
           setActiveClue(cl[cl.length - 1]);
           setPhase(game.phase === 'guess' ? 'guess' : 'clue');
         }
-        if (game.status === 'finished') setGameOver({ winner: game.winner });
+        if (game.status === 'finished') setGameOver({ winner: game.winner, lobbyCode: localStorage.getItem('lastLobbyCode') });
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -94,7 +95,10 @@ export default function Game() {
       setCards(prev => prev.map(c => ({ ...c, votes: 0 })));
     });
 
-    socket.on('game_finished', ({ winner }) => setGameOver({ winner }));
+    socket.on('game_finished', ({ winner, lobbyCode }) => {
+      if (lobbyCode) localStorage.setItem('lastLobbyCode', lobbyCode);
+      setGameOver({ winner, lobbyCode: lobbyCode || localStorage.getItem('lastLobbyCode') });
+    });
 
     return () => socket.disconnect();
   }, [gameId]);
@@ -141,15 +145,35 @@ export default function Game() {
   }
 
   if (gameOver) {
+    const isImpostorWin = gameOver.winner === 'impostor';
+    const lobbyCode = gameOver.lobbyCode || localStorage.getItem('lastLobbyCode');
+    const handleBack = () => navigate(lobbyCode ? `/lobby?code=${lobbyCode}` : '/');
+
     return (
-      <div className="game-page" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem' }}>
-        <h1 className="game-title">
-          {gameOver.winner === 'agents'
-            ? <><span className="hl-yellow">AGENTES</span> VENCEM!</>
-            : <>IMPOSTOR <span className="hl-yellow">VENCE!</span></>}
-        </h1>
-        <button className="clue-send" style={{ padding: '0.8rem 2rem', fontSize: '1rem' }} onClick={() => navigate('/')}>
-          Voltar ao início
+      <div className={`gameover-screen${isImpostorWin ? '' : ' agents-win'}`}>
+        <div className={`gameover-glow${isImpostorWin ? '' : ' agents'}`} />
+        <div className={`gameover-card${isImpostorWin ? '' : ' agents-card'}`}>
+          <img
+            src={logoIcon}
+            alt="Shadow Code"
+            className={`gameover-logo${isImpostorWin ? '' : ' agents-logo'}`}
+          />
+          <div className="gameover-text">
+            <span className="gameover-label">PARTIDA ENCERRADA</span>
+            <h1 className={`gameover-title${isImpostorWin ? '' : ' agents'}`}>
+              {isImpostorWin ? 'O IMPOSTOR VENCEU!' : 'OS AGENTES VENCERAM!'}
+            </h1>
+          </div>
+          {isImpostorWin
+            ? <FaExclamationTriangle className="gameover-warn" />
+            : <FaShieldAlt className="gameover-warn agents-warn" />}
+        </div>
+        <button
+          className={`gameover-btn${isImpostorWin ? '' : ' agents-btn'}`}
+          onClick={handleBack}
+        >
+          <FaChevronLeft />
+          VOLTAR PARA A SALA
         </button>
       </div>
     );
