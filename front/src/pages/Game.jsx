@@ -2,12 +2,14 @@ import "./Game.css";
 import cartaBege    from "../assets/cartas/cartaBege.png";
 import cartaDourada from "../assets/cartas/cartaDourada.png";
 import cartaPreta   from "../assets/cartas/cartaPreta.png";
-import { FaCommentDots, FaPaperPlane, FaPlus, FaBars, FaChevronLeft } from "react-icons/fa";
+import { FaCommentDots, FaPaperPlane, FaPlus, FaBars, FaChevronLeft, FaVolumeUp, FaVolumeMute } from "react-icons/fa";
 const myNick   = localStorage.getItem('nick')           || 'Jogador';
 const myAvatar = localStorage.getItem('selectedAvatar') || '';
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { io } from "socket.io-client";
+import { useLanguage } from "../contexts/LanguageContext";
+import { useMusic } from "../contexts/MusicContext";
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -21,6 +23,8 @@ export default function Game() {
   const navigate    = useNavigate();
   const [searchParams] = useSearchParams();
   const gameId      = searchParams.get('gameId');
+  const { t } = useLanguage();
+  const { musicOn, toggleMusic } = useMusic();
   const socketRef   = useRef(null);
 
   const isMaster = localStorage.getItem('gameRole') === 'master';
@@ -178,7 +182,7 @@ export default function Game() {
   if (loading) {
     return (
       <div className="game-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        Carregando...
+        {t.loading}
       </div>
     );
   }
@@ -194,11 +198,14 @@ export default function Game() {
         </div>
         <div className="game-nav-title">
           {isMaster
-            ? <>DÊ UMA <span className="hl-yellow">DICA</span> PARA SEUS <span className="hl-yellow">AGENTES</span></>
+            ? <>{t.giveClueMaster.pre}<span className="hl-yellow">{t.giveClueMaster.hl1}</span>{t.giveClueMaster.mid}<span className="hl-yellow">{t.giveClueMaster.hl2}</span></>
             : isImpostor
-            ? <>VOCÊ É O <span className="hl-yellow">IMPOSTOR</span>, ATRAPALHE OS <span className="hl-yellow">AGENTES</span></>
-            : <>VOCÊ É UM <span className="hl-yellow">AGENTE</span>, ESPERE A DICA DO <span className="hl-yellow">MESTRE</span></>}
+            ? <>{t.youAreImpostor.pre}<span className="hl-yellow">{t.youAreImpostor.hl1}</span>{t.youAreImpostor.mid}<span className="hl-yellow">{t.youAreImpostor.hl2}</span></>
+            : <>{t.youAreAgent.pre}<span className="hl-yellow">{t.youAreAgent.hl1}</span>{t.youAreAgent.mid}<span className="hl-yellow">{t.youAreAgent.hl2}</span></>}
         </div>
+        <button className="ctrl-btn" onClick={toggleMusic} aria-label="Volume">
+          {musicOn ? <FaVolumeUp /> : <FaVolumeMute />}
+        </button>
         <button className="game-nav-btn" onClick={() => setShowPlayersPanel(p => !p)}>
           <FaBars />
         </button>
@@ -211,7 +218,7 @@ export default function Game() {
           <div className="players-drawer">
             <button className="drawer-close" onClick={() => setShowPlayersPanel(false)}>✕</button>
             <div className="drawer-section">
-              <span className="panel-label">MESTRE</span>
+              <span className="panel-label">{t.masterLabel}</span>
               <div className="drawer-master-row">
                 {master && (
                   <>
@@ -224,7 +231,7 @@ export default function Game() {
               </div>
             </div>
             <div className="drawer-section">
-              <span className="panel-label">AGENTES</span>
+              <span className="panel-label">{t.agentsLabel}</span>
               <div className="drawer-agents-row">
                 {agents.map(agent => (
                   <div className="drawer-agent" key={agent.id}>
@@ -236,25 +243,30 @@ export default function Game() {
                 ))}
               </div>
             </div>
-            <button className="drawer-exit-btn" onClick={() => navigate('/')}>SAIR</button>
+            <button className="drawer-exit-btn" onClick={() => navigate('/')}>{t.exitGame}</button>
           </div>
         </>
       )}
 
       {/* TÍTULO */}
-      <h1 className="game-title">
-        {isMaster
-          ? <>DÊ UMA <span className="hl-yellow">DICA</span> PARA SEUS <span className="hl-yellow">AGENTES</span></>
-          : isImpostor
-          ? <>VOCÊ É O <span className="hl-yellow">IMPOSTOR</span>, ATRAPALHE OS <span className="hl-yellow">AGENTES</span></>
-          : <>VOCÊ É UM <span className="hl-yellow">AGENTE</span>, ESPERE A DICA DO <span className="hl-yellow">MESTRE</span></>}
-      </h1>
+      <div className="game-title-row">
+        <h1 className="game-title">
+          {isMaster
+            ? <>{t.giveClueMaster.pre}<span className="hl-yellow">{t.giveClueMaster.hl1}</span>{t.giveClueMaster.mid}<span className="hl-yellow">{t.giveClueMaster.hl2}</span></>
+            : isImpostor
+            ? <>{t.youAreImpostor.pre}<span className="hl-yellow">{t.youAreImpostor.hl1}</span>{t.youAreImpostor.mid}<span className="hl-yellow">{t.youAreImpostor.hl2}</span></>
+            : <>{t.youAreAgent.pre}<span className="hl-yellow">{t.youAreAgent.hl1}</span>{t.youAreAgent.mid}<span className="hl-yellow">{t.youAreAgent.hl2}</span></>}
+        </h1>
+        <button className="ctrl-btn game-music-btn" onClick={toggleMusic} aria-label="Volume">
+          {musicOn ? <FaVolumeUp /> : <FaVolumeMute />}
+        </button>
+      </div>
 
       <div className="game-body">
 
         {/* PAINEL MESTRE */}
         <aside className="panel-master">
-          <span className="panel-label">MESTRE</span>
+          <span className="panel-label">{t.masterLabel}</span>
           {master && (
             <>
               <div className="master-ring">
@@ -308,7 +320,7 @@ export default function Game() {
 
           {/* LOG MOBILE */}
           <div className="mobile-log">
-            <span className="panel-label">REGISTRO DAS RODADAS</span>
+            <span className="panel-label">{t.roundLog}</span>
             <div className="mobile-log-rows">
               {Array.from({ length: 5 }, (_, i) => {
                 const clue = clues[i];
@@ -327,7 +339,7 @@ export default function Game() {
           {gameOver ? (
             isAdmin && (
               <button className="return-lobby-btn" onClick={handleReturnToLobby}>
-                <FaChevronLeft /> VOLTAR TODOS AO LOBBY
+                <FaChevronLeft /> {t.returnToLobby}
               </button>
             )
           ) : (
@@ -347,7 +359,7 @@ export default function Game() {
                     <input
                       className="clue-input"
                       type="text"
-                      placeholder="Sua dica (uma palavra)..."
+                      placeholder={t.cluePlaceholder}
                       value={clueWord}
                       onChange={e => setClueWord(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleSendClue()}
@@ -377,7 +389,7 @@ export default function Game() {
         {/* SIDEBAR */}
         <aside className="panel-sidebar">
           <div className="sidebar-agents">
-            <span className="panel-label">AGENTES</span>
+            <span className="panel-label">{t.agentsLabel}</span>
             {agents.map(agent => (
               <div className="sidebar-agent" key={agent.id}>
                 <div className="agent-ring">
@@ -389,7 +401,7 @@ export default function Game() {
           </div>
 
           <div className="sidebar-log">
-            <span className="panel-label">REGISTRO DAS RODADAS</span>
+            <span className="panel-label">{t.roundLog}</span>
             {Array.from({ length: 5 }, (_, i) => {
               const clue = clues[i];
               return (
@@ -403,7 +415,7 @@ export default function Game() {
           </div>
 
           <div className="remaining-count">
-            <span className="remaining-label">Restam</span>
+            <span className="remaining-label">{t.remaining}</span>
             <span className="remaining-num">{remaining}</span>
           </div>
         </aside>
@@ -415,9 +427,9 @@ export default function Game() {
         <div className="result-overlay">
           <div className={`result-card${gameOver.winner === 'agents' ? ' agents' : ''}`}>
             <button className="result-close-btn" onClick={() => setShowResult(false)}>✕</button>
-            <span className="result-label">PARTIDA ENCERRADA</span>
+            <span className="result-label">{t.gameOver}</span>
             <p className={`result-title${gameOver.winner === 'agents' ? ' agents' : ''}`}>
-              {gameOver.winner === 'impostor' ? 'O IMPOSTOR VENCEU!' : 'OS AGENTES VENCERAM!'}
+              {gameOver.winner === 'impostor' ? t.impostorWon : t.agentsWon}
             </p>
           </div>
         </div>

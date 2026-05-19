@@ -3,16 +3,21 @@ import logo from "../assets/logoShadowCode.png";
 import {
   FaBookmark, FaCog, FaCrown, FaUsers, FaLink, FaCopy,
   FaPlay, FaRandom, FaSync, FaUserFriends, FaSignInAlt, FaUser, FaStopwatch,
+  FaVolumeUp, FaVolumeMute,
 } from "react-icons/fa";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { io } from "socket.io-client";
+import { useLanguage } from "../contexts/LanguageContext";
+import { useMusic } from "../contexts/MusicContext";
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export default function Lobby() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useLanguage();
+  const { musicOn, toggleMusic } = useMusic();
 
   const nick      = localStorage.getItem('nick')           || 'Jogador';
   const avatarUrl = localStorage.getItem('selectedAvatar') || '';
@@ -54,7 +59,7 @@ export default function Lobby() {
     });
 
     socket.on('lobby_kicked', () => {
-      alert('Você foi removido da sala');
+      alert(t.kicked);
       navigate('/');
     });
 
@@ -134,11 +139,14 @@ export default function Lobby() {
         </div>
 
         <div className="nav-right">
-          <button className="nav-btn"><FaBookmark /> Regras</button>
-          <button className="nav-btn"><FaCog /> Configurações</button>
+          <button className="nav-btn"><FaBookmark /> {t.rules}</button>
+          <button className="nav-btn"><FaCog /> {t.settings}</button>
+          <button className="ctrl-btn" onClick={toggleMusic} aria-label="Volume">
+            {musicOn ? <FaVolumeUp /> : <FaVolumeMute />}
+          </button>
         </div>
 
-        <button className="help-btn" aria-label="Ajuda">?</button>
+        <button className="help-btn" aria-label={t.help}>?</button>
       </nav>
 
       {/* ===== MAIN ===== */}
@@ -146,7 +154,7 @@ export default function Lobby() {
 
         {/* MESTRE */}
         <div className="mestre-card">
-          <h3 className="section-title">MESTRE</h3>
+          <h3 className="section-title">{t.master}</h3>
           <div className="mestre-crown"><FaCrown /></div>
 
           <div className="mestre-avatar-wrap">
@@ -160,13 +168,13 @@ export default function Lobby() {
                     <button
                       className="admin-action-btn kick-btn"
                       onClick={() => handleKick(master.socketId)}
-                      title="Expulsar"
-                    >× Expulsar</button>
+                      title={t.kickBtn}
+                    >{t.kickBtn}</button>
                     <button
                       className="admin-action-btn move-btn"
                       onClick={() => handleMove(master.socketId, 'agent')}
-                      title="Mover para agentes"
-                    >↓ Agentes</button>
+                      title={t.moveToAgents}
+                    >{t.moveToAgents}</button>
                   </div>
                 )}
               </>
@@ -179,13 +187,11 @@ export default function Lobby() {
 
           <p className="mestre-name">{master ? master.nick : '—'}</p>
           <p className="mestre-desc">
-            {master
-              ? 'As dicas estão em suas mãos.'
-              : 'Nenhum mestre ainda.'}
+            {master ? t.masterClueDesc : t.noMaster}
           </p>
 
           {myRole === 'master' ? (
-            <button className="lobby-leave-btn" onClick={handleLeave}>✕ Sair</button>
+            <button className="lobby-leave-btn" onClick={handleLeave}>{t.leave}</button>
           ) : !roleChosen && (
             <button
               className="mestre-enter-btn"
@@ -193,33 +199,33 @@ export default function Lobby() {
               disabled={!!master}
               style={master ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
             >
-              {master ? 'Ocupado' : 'Entrar'}
+              {master ? t.occupied : t.joinRole}
             </button>
           )}
         </div>
 
         {/* AGENTES */}
         <div className="agentes-card">
-          <h3 className="section-title">AGENTES</h3>
+          <h3 className="section-title">{t.agents}</h3>
 
           <div className="agentes-count-row">
             <FaUsers className="agentes-icon" />
             <span className="agentes-number">3 - {maxPlayers}</span>
           </div>
-          <p className="agentes-label-sub">JOGADORES</p>
+          <p className="agentes-label-sub">{t.players}</p>
 
           <p className="agentes-desc">
-            Convide seus amigos para entrar na partida.<br />
-            Quanto mais agentes, mais desafiador!
+            {t.inviteDescLine1}<br />
+            {t.inviteDescLine2}
           </p>
 
           <div className="team-header">
-            NA EQUIPE ({players.length}/{maxPlayers})
+            {t.inTeam} ({players.length}/{maxPlayers})
           </div>
 
           <div className="team-players">
             {agents.length === 0 ? (
-              <p className="no-players-msg">Nenhum agente ainda</p>
+              <p className="no-players-msg">{t.noAgents}</p>
             ) : (
               agents.map(p => (
                 <div className="team-player" key={p.socketId}>
@@ -232,13 +238,13 @@ export default function Lobby() {
                         <button
                           className="admin-action-btn kick-btn small"
                           onClick={() => handleKick(p.socketId)}
-                          title="Expulsar"
+                          title={t.kickBtn}
                         >×</button>
                         <button
                           className="admin-action-btn move-btn small"
                           onClick={() => handleMove(p.socketId, 'master')}
-                          title="Promover a mestre"
-                        >↑</button>
+                          title={t.master}
+                        >{t.moveToMaster}</button>
                       </div>
                     )}
                   </div>
@@ -259,22 +265,22 @@ export default function Lobby() {
           {isAdmin && (
             <div className="agentes-actions">
               <button className="agentes-action-btn" onClick={handleRandom}>
-                <FaRandom /> Randomizar Agentes
+                <FaRandom /> {t.randomizeAgents}
               </button>
               <button className="agentes-action-btn" onClick={handleReset}>
-                <FaSync /> Redefinir Agentes
+                <FaSync /> {t.resetAgents}
               </button>
             </div>
           )}
 
           {isAdmin && (
             <div className="timer-control">
-              <span className="timer-control-label"><FaStopwatch /> Tempo por rodada</span>
+              <span className="timer-control-label"><FaStopwatch /> {t.timePerRound}</span>
               <div className="timer-input-row">
                 <input
                   type="number"
                   className="timer-input"
-                  placeholder="Segundos..."
+                  placeholder={t.secondsPlaceholder}
                   min="5"
                   max="600"
                   value={timerInput}
@@ -282,27 +288,27 @@ export default function Lobby() {
                   onKeyDown={e => e.key === 'Enter' && handleSetTimer()}
                 />
                 <button className="timer-set-btn" onClick={handleSetTimer}>
-                  {roundTime ? 'Alterar' : 'Definir'}
+                  {roundTime ? t.changeTimer : t.setTimer}
                 </button>
                 {roundTime && (
                   <button className="timer-clear-btn" onClick={handleClearTimer}>✕</button>
                 )}
               </div>
               {roundTime && (
-                <span className="timer-active">⏱ {roundTime}s por rodada definido</span>
+                <span className="timer-active">{t.timerActive(roundTime)}</span>
               )}
             </div>
           )}
 
           {!isAdmin && roundTime && (
-            <div className="timer-info">⏱ {roundTime}s por rodada</div>
+            <div className="timer-info">{t.timerInfo(roundTime)}</div>
           )}
 
           {myRole === 'agent' ? (
-            <button className="lobby-leave-btn" onClick={handleLeave}>✕ Sair</button>
+            <button className="lobby-leave-btn" onClick={handleLeave}>{t.leave}</button>
           ) : !roleChosen && (
             <button className="agentes-enter-btn" onClick={() => chooseRole('agent')}>
-              <FaSignInAlt /> Entrar
+              <FaSignInAlt /> {t.joinRole}
             </button>
           )}
         </div>
@@ -313,7 +319,7 @@ export default function Lobby() {
       {isAdmin && (
         <div className="lobby-footer">
           <button className="start-btn" onClick={() => emit('lobby_start', { code: gameCode })}>
-            <FaPlay /> INICIAR JOGO
+            <FaPlay /> {t.startGame}
           </button>
         </div>
       )}

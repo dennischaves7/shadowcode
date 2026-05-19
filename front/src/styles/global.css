@@ -41,8 +41,55 @@ a {
   color: inherit;
 }
 
+/* Botão de controle de música — compartilhado entre todas as páginas */
+.ctrl-btn {
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 0.75rem;
+  background: rgba(90, 24, 154, 0.2);
+  border: 1px solid rgba(123, 44, 191, 0.5);
+  color: #d4b4fe;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.ctrl-btn:hover {
+  background: rgba(90, 24, 154, 0.42);
+}
+
+/* Linha título + botão música na tela Game (desktop) */
+.game-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+.game-music-btn {
+  flex-shrink: 0;
+}
+
 @media (max-width: 768px) {
   html {
     font-size: 15px;
+  }
+  .ctrl-btn {
+    width: 2.7rem;
+    height: 2.7rem;
+    font-size: 0.9rem;
+  }
+  /* No mobile o título do Game está oculto; o botão aparece na navbar mobile */
+  .game-title-row .game-music-btn {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .ctrl-btn {
+    width: 2.3rem;
+    height: 2.3rem;
+    font-size: 0.8rem;
   }
 }
