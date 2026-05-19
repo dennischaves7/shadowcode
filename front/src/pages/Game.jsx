@@ -3,6 +3,8 @@ import cartaBege    from "../assets/cartas/cartaBege.png";
 import cartaDourada from "../assets/cartas/cartaDourada.png";
 import cartaPreta   from "../assets/cartas/cartaPreta.png";
 import { FaCommentDots, FaPaperPlane, FaPlus, FaBars, FaChevronLeft } from "react-icons/fa";
+const myNick   = localStorage.getItem('nick')           || 'Jogador';
+const myAvatar = localStorage.getItem('selectedAvatar') || '';
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { io } from "socket.io-client";
@@ -186,9 +188,10 @@ export default function Game() {
 
       {/* NAVBAR MOBILE */}
       <div className="game-mobile-nav">
-        <button className="game-nav-btn" onClick={() => navigate(-1)}>
-          <FaChevronLeft />
-        </button>
+        <div className="game-nav-badge">
+          {myAvatar && <img src={myAvatar} alt={myNick} />}
+          <span className="game-nav-badge-name">{myNick}</span>
+        </div>
         <div className="game-nav-title">
           {isMaster
             ? <>DÊ UMA <span className="hl-yellow">DICA</span> PARA SEUS <span className="hl-yellow">AGENTES</span></>

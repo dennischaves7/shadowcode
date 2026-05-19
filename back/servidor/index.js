@@ -266,14 +266,9 @@ io.on('connection', (socket) => {
     if (!lobby || lobby.adminSocketId !== socket.id) return;
 
     const hasMaster = lobby.players.some(p => p.gameRole === 'master');
-    const agentCount = lobby.players.filter(p => p.gameRole === 'agent').length;
 
     if (!hasMaster) {
       socket.emit('game_start_error', { message: 'É necessário um mestre para iniciar.' });
-      return;
-    }
-    if (agentCount < 3) {
-      socket.emit('game_start_error', { message: 'São necessários pelo menos 3 agentes.' });
       return;
     }
 

@@ -938,6 +938,7 @@
   .game-page {
     padding: 0;
     height: 100dvh;
+    overflow: hidden;
   }
 
   .game-title { display: none; }
@@ -946,25 +947,39 @@
   .panel-sidebar { display: none; }
 
   .game-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
     flex-direction: column;
-    padding: 0.5rem;
-    gap: 0.5rem;
+    padding: 0;
+    gap: 0;
   }
 
   .game-center {
-    gap: 0.5rem;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
   }
 
   .card-grid {
-    gap: 0.3rem;
     flex: 1;
     min-height: 0;
     max-height: none;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(5, 1fr);
+    gap: 0.2rem;
+    width: 100%;
+    margin: 0;
   }
 
   .card-word {
     font-size: 14px;
     padding: 0 0.2rem calc(0.25rem + 8px);
+    bottom: calc(13% - 5px);
+    text-shadow: none;
   }
 
   /* ── Mobile Nav ── */
@@ -972,7 +987,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.6rem 0.85rem;
+    padding: 0.6rem 0;
     background: rgba(10, 0, 20, 0.85);
     border-bottom: 1px solid rgba(138, 43, 226, 0.22);
     flex-shrink: 0;
@@ -994,6 +1009,34 @@
     justify-content: center;
     cursor: pointer;
     flex-shrink: 0;
+  }
+
+  .game-nav-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.45rem 0.85rem;
+    border-radius: 0.65rem;
+    background: rgba(90, 24, 154, 0.2);
+    border: 1px solid rgba(123, 44, 191, 0.4);
+    flex-shrink: 0;
+  }
+
+  .game-nav-badge img {
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .game-nav-badge-name {
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    max-width: 5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .game-nav-title {
@@ -1127,7 +1170,7 @@
     background: rgba(18, 5, 35, 0.6);
     border: 1px solid rgba(138, 43, 226, 0.2);
     border-radius: 0.65rem;
-    padding: 0.55rem 0.75rem;
+    padding: 0.55rem 0;
     flex-shrink: 0;
   }
 
@@ -1141,11 +1184,20 @@
   .clue-bar {
     border-radius: 3rem;
     padding: 0.45rem 0.45rem 0.45rem 1.2rem;
+    width: 100%;
+    margin: 0;
   }
 
   .clue-display {
     border-radius: 3rem;
     padding: 0.45rem 0.45rem 0.45rem 1.2rem;
+    width: 100%;
+    margin: 0;
+  }
+
+  .round-timer-bar {
+    width: 100%;
+    margin: 0;
   }
 
   .clue-input { font-size: 0.82rem; }
